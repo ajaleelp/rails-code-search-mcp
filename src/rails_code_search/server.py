@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
 from openai import OpenAI
-from pgvector.psycopg import register_vector
+from pgvector.psycopg2 import register_vector
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine
 

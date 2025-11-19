@@ -13,7 +13,7 @@ from .searcher import CodeSearcher
 
 
 @click.group()
-@click.version_option()
+@click.version_option(package_name="rails-code-search-mcp")
 def main():
     """Rails Code Search CLI."""
     pass

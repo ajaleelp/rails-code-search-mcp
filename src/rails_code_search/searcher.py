@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Optional
 
-from pgvector.psycopg import Vector, register_vector
+from pgvector.psycopg2 import register_vector
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
@@ -40,7 +40,7 @@ class CodeSearcher:
         """
         filters = []
         params = {
-            "query_embedding": Vector(query_embedding),
+            "query_embedding": str(query_embedding),
             "top_k": top_k,
         }
 
