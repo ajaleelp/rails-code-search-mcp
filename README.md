@@ -231,8 +231,7 @@ rails-code-search-mcp \
 ### Available MCP Tools
 
 #### `search_code`
-
-Search codebase using natural language queries.
+Semantic search using natural language queries. Best for initial code discovery.
 
 **Parameters:**
 - `query` (string, required) - Natural language description of code to find
@@ -240,12 +239,83 @@ Search codebase using natural language queries.
 - `feature` (string, optional) - Filter by feature tag
 - `class_name` (string, optional) - Filter by class name
 
-**Example usage in Claude:**
-```
-Can you search for "stripe payment webhook handler" in the payments feature?
+#### `list_features`
+List all available features/modules in the codebase. No parameters required.
+
+#### `search_by_feature`
+Get all code in a specific feature/module.
+
+**Parameters:**
+- `feature` (string, required) - Feature name to explore
+- `limit` (integer, optional) - Max results (1-200, default: 100)
+
+#### `search_by_class`
+Find all methods in a specific class.
+
+**Parameters:**
+- `class_name` (string, required) - Class name to search
+- `feature` (string, optional) - Filter by feature
+- `limit` (integer, optional) - Max results (1-100, default: 50)
+
+#### `get_file_chunks`
+Get all code chunks from a specific file.
+
+**Parameters:**
+- `file_path` (string, required) - Path to the file
+- `feature` (string, optional) - Filter by feature
+
+#### `get_surrounding_context`
+Get code chunks around a specific line number.
+
+**Parameters:**
+- `file_path` (string, required) - Path to the file
+- `line_number` (integer, required) - Target line number
+- `context_lines` (integer, optional) - Chunks before/after (1-20, default: 5)
+- `feature` (string, optional) - Filter by feature
+
+#### `search_related_code`
+Find code that references a specific class or method.
+
+**Parameters:**
+- `class_or_method` (string, required) - Name to search for
+- `top_k` (integer, optional) - Number of results (1-50, default: 10)
+- `feature` (string, optional) - Filter by feature
+
+### Interactive Assistant
+
+The repository includes an interactive Claude-powered assistant for code exploration:
+
+```bash
+./assist_me
 ```
 
-Claude will use the `search_code` tool and return relevant code snippets with file paths and line numbers.
+The assistant provides a conversational interface where you can:
+- Ask questions in natural language
+- Get automatic multi-tool exploration
+- See which tools Claude uses
+- Navigate code systematically
+
+**Example session:**
+```
+You> Show me all features in this codebase
+[list_features] found 30 feature(s)
+
+Claude> I found 30 features. The largest are vitamin_d (90 chunks) and women_health (60 chunks)...
+
+You> Find code related to pulse age calculation
+[search_code] found 5 result(s)
+[search_by_class] found 12 method(s) in 'Ppg::PulseAgeAnalysisService'
+
+Claude> The pulse age calculation is in Ppg::PulseAgeAnalysisService at line 42...
+```
+
+**Setup:**
+First run creates `env.sh` template. Edit with your credentials:
+```bash
+export CODE_SEARCH_DATABASE_URL='postgresql://localhost/your_db'
+export CODE_SEARCH_OPENAI_API_KEY='sk-...'
+export ANTHROPIC_API_KEY='sk-ant-...'
+```
 
 ## Configuration
 
