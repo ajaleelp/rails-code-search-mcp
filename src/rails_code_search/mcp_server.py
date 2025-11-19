@@ -44,9 +44,112 @@ SEARCH_CODE_INPUT_SCHEMA = {
     "required": ["query"],
 }
 
+GET_FILE_CHUNKS_INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "file_path": {
+            "type": "string",
+            "description": "Path to the file"
+        },
+        "feature": {
+            "type": "string",
+            "description": "Optional feature filter"
+        },
+    },
+    "required": ["file_path"],
+}
+
+SEARCH_BY_CLASS_INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "class_name": {
+            "type": "string",
+            "description": "Name of the class to search for"
+        },
+        "feature": {
+            "type": "string",
+            "description": "Optional feature filter"
+        },
+        "limit": {
+            "type": "integer",
+            "default": 50,
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of results"
+        },
+    },
+    "required": ["class_name"],
+}
+
+SEARCH_BY_FEATURE_INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "feature": {
+            "type": "string",
+            "description": "Feature tag to search for"
+        },
+        "limit": {
+            "type": "integer",
+            "default": 100,
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Maximum number of results"
+        },
+    },
+    "required": ["feature"],
+}
+
+GET_SURROUNDING_CONTEXT_INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "file_path": {
+            "type": "string",
+            "description": "Path to the file"
+        },
+        "line_number": {
+            "type": "integer",
+            "description": "Target line number"
+        },
+        "context_lines": {
+            "type": "integer",
+            "default": 5,
+            "minimum": 1,
+            "maximum": 20,
+            "description": "Number of chunks to retrieve before/after target"
+        },
+        "feature": {
+            "type": "string",
+            "description": "Optional feature filter"
+        },
+    },
+    "required": ["file_path", "line_number"],
+}
+
+SEARCH_RELATED_CODE_INPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "class_or_method": {
+            "type": "string",
+            "description": "Class or method name to search for references"
+        },
+        "top_k": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Number of results to return"
+        },
+        "feature": {
+            "type": "string",
+            "description": "Optional feature filter"
+        },
+    },
+    "required": ["class_or_method"],
+}
+
 
 class CodeSearchMCPServer:
-    """MCP server for semantic code search."""
+    """MCP server for semantic code search and navigation."""
 
     def __init__(self, config: SearchConfig):
         """Initialize MCP server with configuration.
@@ -66,11 +169,41 @@ class CodeSearchMCPServer:
                 "name": "search_code",
                 "description": "Search codebase using natural language queries. Returns semantically similar code snippets with file paths, line numbers, and class/method context.",
                 "input_schema": SEARCH_CODE_INPUT_SCHEMA,
-            }
+            },
+            {
+                "name": "get_file_chunks",
+                "description": "Get all code chunks from a specific file, ordered by line number. Use this after search_code to see complete file contents.",
+                "input_schema": GET_FILE_CHUNKS_INPUT_SCHEMA,
+            },
+            {
+                "name": "search_by_class",
+                "description": "Find all methods in a specific class. Useful for understanding class structure and available methods.",
+                "input_schema": SEARCH_BY_CLASS_INPUT_SCHEMA,
+            },
+            {
+                "name": "search_by_feature",
+                "description": "List all code in a specific feature/module. Useful for exploring feature boundaries and architecture.",
+                "input_schema": SEARCH_BY_FEATURE_INPUT_SCHEMA,
+            },
+            {
+                "name": "get_surrounding_context",
+                "description": "Get code chunks around a specific line number in a file. Useful for understanding context around a specific code location.",
+                "input_schema": GET_SURROUNDING_CONTEXT_INPUT_SCHEMA,
+            },
+            {
+                "name": "list_features",
+                "description": "List all available features/modules in the codebase with their chunk counts. No parameters required.",
+                "input_schema": {"type": "object", "properties": {}},
+            },
+            {
+                "name": "search_related_code",
+                "description": "Find code that references a specific class or method name. Useful for finding usage examples and dependencies.",
+                "input_schema": SEARCH_RELATED_CODE_INPUT_SCHEMA,
+            },
         ]
 
     def search_code(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute code search.
+        """Execute semantic code search.
 
         Args:
             payload: Search parameters including query, top_k, feature, class_name
@@ -112,6 +245,103 @@ class CodeSearchMCPServer:
 
         return {
             "query": query,
+            "result_count": len(results),
+            "results": results,
+        }
+
+    def get_file_chunks(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Get all chunks from a file."""
+        file_path = payload.get("file_path")
+        if not file_path:
+            raise ValueError("'file_path' is required")
+
+        feature = payload.get("feature")
+        results = self.searcher.get_file_chunks(file_path, feature)
+
+        return {
+            "file_path": file_path,
+            "chunk_count": len(results),
+            "chunks": results,
+        }
+
+    def search_by_class(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Search for all methods in a class."""
+        class_name = payload.get("class_name")
+        if not class_name:
+            raise ValueError("'class_name' is required")
+
+        feature = payload.get("feature")
+        limit = payload.get("limit", 50)
+
+        results = self.searcher.search_by_class(class_name, feature, limit)
+
+        return {
+            "class_name": class_name,
+            "method_count": len(results),
+            "methods": results,
+        }
+
+    def search_by_feature(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Search for all code in a feature."""
+        feature = payload.get("feature")
+        if not feature:
+            raise ValueError("'feature' is required")
+
+        limit = payload.get("limit", 100)
+        results = self.searcher.search_by_feature(feature, limit)
+
+        return {
+            "feature": feature,
+            "chunk_count": len(results),
+            "chunks": results,
+        }
+
+    def get_surrounding_context(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Get code chunks around a line number."""
+        file_path = payload.get("file_path")
+        line_number = payload.get("line_number")
+
+        if not file_path:
+            raise ValueError("'file_path' is required")
+        if line_number is None:
+            raise ValueError("'line_number' is required")
+
+        context_lines = payload.get("context_lines", 5)
+        feature = payload.get("feature")
+
+        results = self.searcher.get_surrounding_context(
+            file_path, line_number, context_lines, feature
+        )
+
+        return {
+            "file_path": file_path,
+            "target_line": line_number,
+            "chunk_count": len(results),
+            "chunks": results,
+        }
+
+    def list_features(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """List all features in the codebase."""
+        results = self.searcher.list_features()
+
+        return {
+            "feature_count": len(results),
+            "features": results,
+        }
+
+    def search_related_code(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Search for code that references a class/method."""
+        class_or_method = payload.get("class_or_method")
+        if not class_or_method:
+            raise ValueError("'class_or_method' is required")
+
+        top_k = payload.get("top_k", 10)
+        feature = payload.get("feature")
+
+        results = self.searcher.search_related_code(class_or_method, top_k, feature)
+
+        return {
+            "search_term": class_or_method,
             "result_count": len(results),
             "results": results,
         }
@@ -166,6 +396,19 @@ def search_code(ctx: click.Context, query: str, top_k: int, feature: Optional[st
         raise SystemExit(1) from exc
 
 
+@cli.command("list-features")
+@click.pass_context
+def list_features_cmd(ctx: click.Context) -> None:
+    """List all features in the codebase."""
+    server: CodeSearchMCPServer = ctx.obj["server"]
+    try:
+        result = server.list_features({})
+        click.echo(_json_dump(result))
+    except ValueError as exc:
+        click.echo(_json_dump({"error": str(exc)}), err=True)
+        raise SystemExit(1) from exc
+
+
 @cli.command("serve")
 @click.pass_context
 def serve(ctx: click.Context) -> None:
@@ -180,28 +423,42 @@ async def _run_mcp_server(app_server: CodeSearchMCPServer) -> None:
 
     @mcp_server.list_tools()
     async def _list_tools() -> list[mcp_types.Tool]:
+        tools_list = app_server.list_tools()
         return [
             mcp_types.Tool(
-                name="search_code",
-                description="Search codebase using natural language queries. Returns semantically similar code snippets with file paths, line numbers, and class/method context.",
-                inputSchema=SEARCH_CODE_INPUT_SCHEMA,
+                name=tool["name"],
+                description=tool["description"],
+                inputSchema=tool["input_schema"],
             )
+            for tool in tools_list
         ]
 
     @mcp_server.call_tool()
     async def _call_tool(name: str, arguments: dict[str, Any] | None) -> list[mcp_types.TextContent]:
-        if name != "search_code":
-            raise ValueError(f"Unknown tool '{name}'")
-
         payload = arguments or {}
 
-        def search_wrapper() -> Dict[str, Any]:
+        def execute_tool() -> Dict[str, Any]:
             try:
-                return app_server.search_code(payload)
+                if name == "search_code":
+                    return app_server.search_code(payload)
+                elif name == "get_file_chunks":
+                    return app_server.get_file_chunks(payload)
+                elif name == "search_by_class":
+                    return app_server.search_by_class(payload)
+                elif name == "search_by_feature":
+                    return app_server.search_by_feature(payload)
+                elif name == "get_surrounding_context":
+                    return app_server.get_surrounding_context(payload)
+                elif name == "list_features":
+                    return app_server.list_features(payload)
+                elif name == "search_related_code":
+                    return app_server.search_related_code(payload)
+                else:
+                    raise ValueError(f"Unknown tool '{name}'")
             except ValueError as exc:
                 raise ValueError(str(exc))
 
-        result = await anyio.to_thread.run_sync(search_wrapper)
+        result = await anyio.to_thread.run_sync(execute_tool)
         result_json = _json_dump(result)
 
         return [

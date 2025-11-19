@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
+
+if [ ! -d ".venv" ]; then
+  echo "[assist_me] Creating virtualenv..."
+  { python3.12 -m venv .venv || python3.11 -m venv .venv || python3 -m venv .venv; }
+  .venv/bin/pip install --upgrade pip
+  .venv/bin/pip install -e '.' anthropic
+fi
+
+# Ensure anthropic is installed even if venv exists
+if ! .venv/bin/python -c "import anthropic" 2>/dev/null; then
+  echo "[assist_me] Installing anthropic..."
+  .venv/bin/pip install anthropic
+fi
+
+source .venv/bin/activate
+
+ENV_FILE="env.sh"
+if [ ! -f "$ENV_FILE" ]; then
+  cat <<'EONV' > "$ENV_FILE"
+export CODE_SEARCH_DATABASE_URL='postgresql://localhost/code_search_embeddings'
+export CODE_SEARCH_OPENAI_API_KEY='sk-REPLACE_ME'
+export ANTHROPIC_API_KEY='sk-ant-REPLACE_ME'
+export CLAUDE_MODEL='claude-sonnet-4-20250514'
+EONV
+  echo "Created env.sh. Edit it with real credentials, then rerun assist_me."
+  exit 1
+fi
+
+source "$ENV_FILE"
+./scripts/assistant.py
