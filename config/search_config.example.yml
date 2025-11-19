@@ -1,0 +1,36 @@
+# Rails Code Search Configuration Example
+
+# OpenAI Settings
+embedding_model: text-embedding-3-small
+embedding_dimensions: 1536
+
+# Search Behavior
+default_top_k: 5
+max_results: 20
+
+# Chunking Settings
+max_lines_per_chunk: 80
+context_lines_before: 5
+context_lines_after: 5
+
+# File Patterns
+include_extensions:
+  - .rb
+  - .yml
+  - .yaml
+
+exclude_patterns:
+  - "*_spec.rb"
+  - "*_factory.rb"
+  - "spec/**/*"
+  - "test/**/*"
+  - "tmp/**/*"
+  - "vendor/**/*"
+  - "node_modules/**/*"
+
+# Database
+database_url: postgresql://localhost:5432/code_search_embeddings
+table_name: embeddings
+
+# Rate Limiting
+max_embedding_requests_per_minute: 60
