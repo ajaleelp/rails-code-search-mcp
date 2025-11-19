@@ -35,6 +35,7 @@ dependencies = [
     "click>=8.1.0",
     "tqdm>=4.65.0",
     "mcp>=0.1.0",
+    "anyio>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -48,6 +49,7 @@ dev = [
 
 [project.scripts]
 rails-code-search = "rails_code_search.cli:main"
+rails-code-search-mcp = "rails_code_search.mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/jaleel/rails-code-search-mcp"
