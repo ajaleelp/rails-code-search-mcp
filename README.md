@@ -179,6 +179,74 @@ Search code by natural language query.
 }
 ```
 
+## MCP Integration (Claude Desktop)
+
+This server implements the Model Context Protocol (MCP), allowing Claude Desktop to search your codebase directly.
+
+### Setup for Claude Desktop
+
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "rails-code-search": {
+      "command": "/path/to/rails-code-search-mcp/.venv/bin/rails-code-search-mcp",
+      "args": [
+        "--database-url", "postgresql://localhost/code_search_embeddings",
+        "--openai-api-key", "sk-...",
+        "serve"
+      ]
+    }
+  }
+}
+```
+
+### MCP CLI Commands
+
+Test the MCP server locally:
+
+```bash
+# List available tools
+rails-code-search-mcp \
+  --database-url="postgresql://localhost/code_search_embeddings" \
+  --openai-api-key="sk-..." \
+  list-tools
+
+# Search code via MCP CLI
+rails-code-search-mcp \
+  --database-url="postgresql://localhost/code_search_embeddings" \
+  --openai-api-key="sk-..." \
+  search-code \
+  --query "user authentication" \
+  --top-k 5
+
+# Start MCP stdio server (for Claude Desktop)
+rails-code-search-mcp \
+  --database-url="postgresql://localhost/code_search_embeddings" \
+  --openai-api-key="sk-..." \
+  serve
+```
+
+### Available MCP Tools
+
+#### `search_code`
+
+Search codebase using natural language queries.
+
+**Parameters:**
+- `query` (string, required) - Natural language description of code to find
+- `top_k` (integer, optional) - Number of results (1-20, default: 5)
+- `feature` (string, optional) - Filter by feature tag
+- `class_name` (string, optional) - Filter by class name
+
+**Example usage in Claude:**
+```
+Can you search for "stripe payment webhook handler" in the payments feature?
+```
+
+Claude will use the `search_code` tool and return relevant code snippets with file paths and line numbers.
+
 ## Configuration
 
 Configuration can be provided via:
