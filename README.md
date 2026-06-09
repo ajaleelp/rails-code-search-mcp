@@ -23,7 +23,7 @@ Semantic code search for Rails applications using OpenAI embeddings and PostgreS
 ### 1. Install from source
 
 ```bash
-git clone https://github.com/jaleel/rails-code-search-mcp.git
+git clone https://github.com/ajaleelp/rails-code-search-mcp.git
 cd rails-code-search-mcp
 
 # Create virtual environment
@@ -409,6 +409,23 @@ Using `text-embedding-3-small`:
 - **Price**: $0.02 per 1M tokens
 - **Average file**: ~500 tokens
 - **10,000 files**: ~5M tokens = **$0.10**
+
+## How it was built
+
+This was AI-assisted: Claude wrote most of the line-level code while I designed the
+architecture and reviewed and steered each step. The chunking strategy (Ruby Ripper
+for method-level chunks with class context preserved), the retrieval design over
+pgvector, the MCP tool surface, and the test coverage were mine; the agent filled in
+the implementation under detailed oversight.
+
+I am calling that out because the project is itself in service of that workflow:
+tooling that makes a codebase navigable by AI agents, and AI-assisted work reviewable
+and trustworthy.
+
+## Status
+
+Working, in use, not in active development. Shipped to the point where it does its
+job, then day-job priorities took over. Issues and PRs welcome.
 
 ## License
 
